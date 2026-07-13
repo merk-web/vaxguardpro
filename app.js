@@ -331,6 +331,12 @@ function switchTab(tabId) {
     if (tabId === 'dashboard') {
         renderDashboardData();
     }
+    // Re-render settings tables when switching to settings (needed after DB changes)
+    if (tabId === 'settings') {
+        refreshPackagesFromDB();
+        refreshVaccineRulesFromDB();
+        refreshCapacitiesFromDB();
+    }
 }
 
 function toggleSidebarMinimize() {
@@ -862,7 +868,8 @@ async function runStockValidation() {
     // Collect dropdown values
     const keys = ['office', 'vaccine', 'remaining', 'vaccinated', 'doses', 'wastage', 'destroyed', 'batchId', 'entryDate', 'expiry'];
     keys.forEach(k => {
-        stockMapping[k] = document.getElementById(`select-map-stock-${k}`).value;
+        const el = document.getElementById(`select-map-stock-${k}`);
+        stockMapping[k] = el ? el.value : '';
     });
 
     if (!stockMapping.office) return showToast('يرجى تحديد عمود مكتب الصحة', false);
@@ -1469,32 +1476,36 @@ async function processConsumptionSheetData() {
     const existingOffices = [...new Set(monthlyAverages.map(a => a.office))].sort();
     const existingVaccines = [...SYSTEM_VACCINES].sort();
 
-    // 1. Check Offices
+    // 1. Check Offices (only flag if existingOffices is non-empty AND name not already tied)
     excelOffices.forEach(o => {
         const translated = translateName('office', o);
-        const match = existingOffices.find(eo => eo === translated);
-        if (!match) {
-            // Unmatched office name
-            pendingUnmatchedTies.push({
-                category: 'office',
-                sourceName: o,
-                suggestions: existingOffices
-            });
-        }
+        // Already has a tie registered
+        const hasTie = nameTies.some(t => t.category === 'office' && t.sourceName === o);
+        if (hasTie) return;
+        // Exact match in known offices
+        const directMatch = existingOffices.find(eo => eo === translated || eo === o);
+        if (directMatch) return;
+        // Only ask if we actually have offices to compare against
+        if (existingOffices.length === 0) return;
+        pendingUnmatchedTies.push({
+            category: 'office',
+            sourceName: o,
+            suggestions: existingOffices
+        });
     });
 
-    // 2. Check Vaccines
+    // 2. Check Vaccines (only flag if not already tied)
     excelVaccines.forEach(v => {
         const translated = translateName('vaccine', v);
-        const match = existingVaccines.find(ev => ev.toLowerCase().replace(/\s+/g, '') === translated.toLowerCase().replace(/\s+/g, ''));
-        if (!match) {
-            // Unmatched vaccine name
-            pendingUnmatchedTies.push({
-                category: 'vaccine',
-                sourceName: v,
-                suggestions: existingVaccines
-            });
-        }
+        const hasTie = nameTies.some(t => t.category === 'vaccine' && t.sourceName === v);
+        if (hasTie) return;
+        const directMatch = existingVaccines.find(ev => ev.toLowerCase().replace(/\s+/g, '') === translated.toLowerCase().replace(/\s+/g, '') || ev === v);
+        if (directMatch) return;
+        pendingUnmatchedTies.push({
+            category: 'vaccine',
+            sourceName: v,
+            suggestions: existingVaccines
+        });
     });
 
     if (pendingUnmatchedTies.length > 0) {
@@ -2783,6 +2794,7 @@ async function extractAndMergeVaccineRules() {
 
 function renderCapacitiesTable() {
     const tbody = document.getElementById('capacities-tbody');
+    if (!tbody) return;
     tbody.innerHTML = '';
     
     if (vaccineCapacities.length === 0) {
@@ -2877,6 +2889,7 @@ async function refreshPackagesFromDB() {
 
 function renderPackagesTable(list) {
     const tbody = document.getElementById('packages-tbody');
+    if (!tbody) return;  // tab not mounted yet, data is in memory
     tbody.innerHTML = '';
 
     list.forEach(function(p) {
