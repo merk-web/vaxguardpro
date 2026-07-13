@@ -1,0 +1,58 @@
+# Netlify configuration for VaxGuard Suite
+# Pure static site — no build step required
+
+[build]
+  publish = "."        # serve from repo root
+  ignore = "exit 0"   # nothing to build, always "changed"
+
+# ── Security & PWA headers ────────────────────────────────────────────────────
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options         = "DENY"
+    X-Content-Type-Options  = "nosniff"
+    Referrer-Policy         = "strict-origin-when-cross-origin"
+    Permissions-Policy      = "camera=(), microphone=(), geolocation=()"
+
+# Service Worker must be served from root scope
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control           = "no-cache, no-store, must-revalidate"
+    Service-Worker-Allowed  = "/"
+
+# Cache static assets aggressively
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# manifest.json — short cache so PWA updates propagate quickly
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+# HTML — always revalidate so users get latest version
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# ── Redirects ─────────────────────────────────────────────────────────────────
+# SPA fallback — redirect all unknown paths to index.html
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
