@@ -1,0 +1,27 @@
+# Backup archives
+*.rar
+*.zip
+
+# Local DB snapshot
+*.db
+
+# Dev-only scripts
+*.py
+vaccine_reviewer.py
+
+# Personal/sensitive files
+about-me.jpg
+user_profile.md
+
+# Example test files (large, not needed in repo)
+example files/
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Dev temp
+*.log
+*.tmp
+node_modules/

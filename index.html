@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VaxGuard Suite • المنظومة المتكاملة لفحص اللقاحات وتتبع التطعيمات</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#8b5cf6">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><text y=%2250%22 font-size=%2248%22>🛡️</text></svg>">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Stylesheets & Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Core CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="app-container" class="app-layout">
+    
+    <!-- Sidebar Overlay for Mobile -->
+    <div id="sidebar-overlay" onclick="toggleMobileMenu()" class="sidebar-overlay hidden"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="sidebar-panel">
+        <div class="sidebar-header">
+            <div class="brand-info">
+                <div class="brand-icon">🛡️</div>
+                <div class="brand-text">
+                    <span class="brand-name">VaxGuard Suite</span>
+                    <span class="brand-subtitle">المنظومة المتكاملة للقاحات</span>
+                </div>
+            </div>
+            <button onclick="toggleSidebarMinimize()" class="btn-toggle-min hidden-mobile">
+                <i id="min-icon" class="fa-solid fa-chevron-right"></i>
+            </button>
+            <button onclick="toggleMobileMenu()" class="btn-close-menu visible-mobile">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active">
+                <i class="fa-solid fa-chart-line"></i>
+                <span class="nav-label">لوحة التحكم والتحليل</span>
+            </button>
+            
+            <div class="nav-separator">مراجعة المخزون</div>
+            
+            <button onclick="switchTab('stock-reviewer')" id="nav-stock-reviewer" class="nav-item">
+                <i class="fa-solid fa-file-invoice"></i>
+                <span class="nav-label">فحص مخزون الوحدات</span>
+            </button>
+            <button onclick="switchTab('monthly-averages')" id="nav-monthly-averages" class="nav-item">
+                <i class="fa-solid fa-sliders"></i>
+                <span class="nav-label">معدلات الاستهلاك</span>
+            </button>
+            <button onclick="switchTab('name-ties')" id="nav-name-ties" class="nav-item">
+                <i class="fa-solid fa-link"></i>
+                <span class="nav-label">روابط مطابقة الأسماء</span>
+            </button>
+
+            <div class="nav-separator">سلامة التشغيلات</div>
+
+            <button onclick="switchTab('batch-verifier')" id="nav-batch-verifier" class="nav-item">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span class="nav-label">التحقق من التشغيلات</span>
+            </button>
+            <button onclick="switchTab('batch-db')" id="nav-batch-db" class="nav-item">
+                <i class="fa-solid fa-database"></i>
+                <span class="nav-label">قاعدة التشغيلات</span>
+            </button>
+
+            <div class="nav-separator">النظام والعمليات</div>
+
+            <button onclick="switchTab('history')" id="nav-history" class="nav-item">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span class="nav-label">سجل الفحوصات والتقارير</span>
+            </button>
+            <button onclick="switchTab('utilities')" id="nav-utilities" class="nav-item">
+                <i class="fa-solid fa-laptop-medical"></i>
+                <span class="nav-label">الخدمات والأدوات الإضافية</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="nav-item">
+                <i class="fa-solid fa-gear"></i>
+                <span class="nav-label">إعدادات الفحص</span>
+            </button>
+            <button onclick="switchTab('user-guide')" id="nav-user-guide" class="nav-item">
+                <i class="fa-solid fa-book"></i>
+                <span class="nav-label">دليل المستخدم المساعد</span>
+            </button>
+            <button onclick="switchTab('about')" id="nav-about" class="nav-item">
+                <i class="fa-solid fa-circle-user"></i>
+                <span class="nav-label">حول المطور (About)</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="footer-status">
+                <span class="status-indicator online"></span>
+                <span class="status-text">IndexedDB نشط (موفّر للطاقة)</span>
+            </div>
+            <div class="footer-buttons">
+                <button onclick="showInstallPrompt()" class="btn-install-pwa">
+                    <i class="fa-solid fa-download"></i> تثبيت التطبيق
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-viewport">
+        <!-- Top Toolbar -->
+        <header class="top-toolbar">
+            <div class="toolbar-left">
+                <button class="btn-mobile-menu visible-mobile" onclick="toggleMobileMenu()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h1 id="page-title" class="page-title">لوحة التحكم والتحليل</h1>
+            </div>
+            <div class="toolbar-right">
+                <!-- Quick Expiry Warning Badge -->
+                <div id="quick-alert-badge" class="quick-badge hidden" onclick="switchTab('stock-reviewer')">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span id="quick-alert-text">تنبيهات نشطة</span>
+                </div>
+                <!-- Theme Toggle -->
+                <button onclick="toggleTheme()" class="btn-toolbar" title="تغيير المظهر">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
+                <!-- Language Toggle -->
+                <button onclick="toggleLanguage()" class="btn-toolbar" id="lang-toggle-btn" title="Toggle Language">
+                    <i class="fa-solid fa-language"></i>
+                    <span class="lang-text">EN</span>
+                </button>
+                <!-- User Profile Summary / Quick Language Toggle -->
+                <div class="user-profile-badge">
+                    <div class="avatar">WS</div>
+                    <span class="profile-name">وائل سيد</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Viewport Workspace Content -->
+        
+        <!-- Tab: Dashboard -->
+        <div id="tab-dashboard" class="tab-panel active">
+            <div class="dashboard-grid">
+                <!-- KPI Dashboard Widgets -->
+                <div class="kpi-card glass border-violet">
+                    <div class="kpi-icon"><i class="fa-solid fa-hospital"></i></div>
+                    <div class="kpi-details">
+                        <span class="kpi-title">الوحدات والمكاتب المشمولة</span>
+                        <h2 id="dash-stat-offices" class="kpi-value">0</h2>
+                    </div>
+                </div>
+                
+                <div class="kpi-card glass border-emerald">
+                    <div class="kpi-icon"><i class="fa-solid fa-vial"></i></div>
+                    <div class="kpi-details">
+                        <span class="kpi-title">إجمالي جرعات اللقاحات</span>
+                        <h2 id="dash-stat-doses" class="kpi-value">0</h2>
+                    </div>
+                </div>
+
+                <div class="kpi-card glass border-amber">
+                    <div class="kpi-icon"><i class="fa-solid fa-shield-virus"></i></div>
+                    <div class="kpi-details">
+                        <span class="kpi-title">التشغيلات المعتمدة بالدليل</span>
+                        <h2 id="dash-stat-batches" class="kpi-value">0</h2>
+                    </div>
+                </div>
+
+                <div class="kpi-card glass border-rose cursor-pointer" onclick="switchToIssues()" title="انقر لعرض المكاتب المخالفة بالتفصيل">
+                    <div class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="kpi-details">
+                        <span class="kpi-title">المكاتب ذات المشاكل</span>
+                        <h2 id="dash-stat-issues" class="kpi-value">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scientifically structured charts section -->
+            <div class="charts-layout">
+                <div class="chart-card glass">
+                    <h3 id="chart-doses-dist-title" class="chart-title">توزيع اللقاحات المتبقية حسب الطعم والنوع</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-doses-dist"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card glass">
+                    <h3 id="chart-issues-radar-title" class="chart-title">مؤشر المخالفات والمخاطر المكتشفة</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-issues-radar"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-summary-layout mt-6">
+                <div class="glass p-6 rounded-3xl">
+                    <h3 class="section-title mb-4"><i class="fa-solid fa-circle-info text-violet-400"></i> <span id="expiry-urgency-title">لقاحات أقرب لانتهاء الصلاحية بالمخزون</span></h3>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>مكتب الصحة</th>
+                                    <th>الطعم</th>
+                                    <th>رقم التشغيلة</th>
+                                    <th>تاريخ الانتهاء</th>
+                                    <th>المتبقي</th>
+                                    <th>مستوى الخطورة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-expiry-table">
+                                <tr>
+                                    <td colspan="6" class="text-center text-zinc-500">قم برفع ملف مخزون لعرض البيانات التحليلية.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Stock Reviewer -->
+        <div id="tab-stock-reviewer" class="tab-panel hidden">
+            <div class="stock-operations">
+                <!-- Drag and drop zone -->
+                <div id="stock-upload-zone" class="upload-zone glass border-dashed" onclick="document.getElementById('stock-file-input').click()">
+                    <i class="fa-solid fa-file-excel upload-icon"></i>
+                    <h2 id="stock-upload-title" class="upload-heading">قم بسحب وإسقاط ملف مخزون اللقاحات هنا</h2>
+                    <p id="stock-upload-desc" class="upload-subheading">أو انقر لتصفح الملفات من جهازك (.xlsx, .xls)</p>
+                    <input type="file" id="stock-file-input" accept=".xlsx, .xls" class="hidden" onchange="handleStockUpload(event)">
+                </div>
+
+                <div class="flex justify-center mt-4 mb-6">
+                    <button onclick="downloadStockTemplate()" class="btn btn-secondary btn-sm btn-download-template">
+                        <i class="fa-solid fa-file-arrow-down"></i> تحميل نموذج ملف جرد اللقاحات المعتمد (.xlsx)
+                    </button>
+                </div>
+
+                <!-- Column Mapping & Options (Hidden initially) -->
+                <div id="stock-mapping-container" class="mapping-card glass mt-6 hidden">
+                    <div class="mapping-header">
+                        <div class="file-badge">
+                            <i class="fa-solid fa-file-excel text-emerald-400"></i>
+                            <span id="stock-filename" class="font-semibold text-white">Vaccine_Stock.xlsx</span>
+                        </div>
+                        <button onclick="resetStockUpload()" class="btn btn-secondary btn-sm">
+                            إلغاء وتغيير الملف <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
+
+                    <!-- Spreadsheet columns preview (first 5 rows) -->
+                    <div class="preview-section mt-6">
+                        <span class="preview-title">معاينة جدول البيانات الواردة (أول 5 صفوف)</span>
+                        <div class="table-responsive mt-2">
+                            <table id="stock-preview-table" class="data-table small"></table>
+                        </div>
+                    </div>
+
+                    <div class="mapping-grid-section mt-6">
+                        <h3 class="section-title"><i class="fa-solid fa-link text-violet-400"></i> ربط أعمدة فحص المخزون</h3>
+                        <p class="section-subtitle">قم بمطابقة أسماء الأعمدة في ملف الإكسيل مع حقول النظام لتشغيل الفحص التلقائي.</p>
+                        
+                        <div id="stock-mapping-fields" class="mapping-fields-grid mt-4">
+                            <!-- Dynamic mapping dropdowns will be rendered here -->
+                        </div>
+                    </div>
+
+                    <div class="actions-footer mt-8">
+                        <button onclick="runStockValidation()" class="btn btn-primary w-full py-4 text-lg">
+                            <i class="fa-solid fa-square-check"></i> بدء مراجعة وفحص المخزون
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stock Results Section (Hidden initially) -->
+                <div id="stock-results-container" class="results-card mt-6 hidden">
+                    <div class="results-header glass">
+                        <div class="results-summary-info">
+                            <h3 class="results-title text-white">نتائج مراجعة مخزون الوحدات والمكاتب</h3>
+                            <p class="results-subtitle" id="stock-results-summary-text">جاري احتساب النتائج...</p>
+                        </div>
+                        
+                        <div class="export-actions flex-wrap gap-2">
+                            <button onclick="exportStockExcel(true)" class="btn-export btn-export-excel">
+                                <i class="fa-solid fa-file-export"></i> تصدير التقرير المنسق (RTL)
+                            </button>
+                            <button onclick="exportStockExcel(false)" class="btn-export btn-export-amber">
+                                <i class="fa-solid fa-file-circle-exclamation"></i> تصدير المخالفات فقط
+                            </button>
+                            <button onclick="exportResultsPNG()" class="btn-export btn-export-png">
+                                <i class="fa-solid fa-image"></i> تصدير الجدول كصورة (PNG)
+                            </button>
+                            <button onclick="resetStockUpload()" class="btn btn-secondary">
+                                <i class="fa-solid fa-rotate-left"></i> فحص ملف جديد
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Grid list of offices showing issues count -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                        <div class="stats-box glass border-rose text-center p-6">
+                            <h2 id="stock-stat-total-issues" class="text-rose-400 text-4xl font-bold">0</h2>
+                            <span class="text-zinc-400 text-sm mt-1 block">إجمالي المشاكل المكتشفة</span>
+                        </div>
+                        <div class="stats-box glass border-amber text-center p-6">
+                            <h2 id="stock-stat-expired-issues" class="text-amber-400 text-4xl font-bold">0</h2>
+                            <span class="text-zinc-400 text-sm mt-1 block">مخزون منتهي الصلاحية</span>
+                        </div>
+                        <div class="stats-box glass border-violet text-center p-6">
+                            <h2 id="stock-stat-vial-issues" class="text-violet-400 text-4xl font-bold">0</h2>
+                            <span class="text-zinc-400 text-sm mt-1 block">مخالفات سعة العبوات والجرعات</span>
+                        </div>
+                    </div>
+
+                    <div class="results-table-section glass mt-6 p-6">
+                        <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+                            <h3 class="section-title">قائمة السجلات التفصيلية للمكاتب والوحدات</h3>
+                            <div class="filter-controls flex gap-2">
+                                <button onclick="filterStockTable('all')" id="btn-filter-stock-all" class="btn-filter active">عرض الكل</button>
+                                <button onclick="filterStockTable('issue')" id="btn-filter-stock-issue" class="btn-filter text-rose-400">المخالفات فقط</button>
+                                <button onclick="filterStockTable('clean')" id="btn-filter-stock-clean" class="btn-filter text-emerald-400">السجلات السليمة</button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive max-h-500 overflow-y-auto">
+                            <table class="data-table">
+                                <thead class="sticky-thead">
+                                    <tr>
+                                        <th>الصف</th>
+                                        <th>مكتب الصحة</th>
+                                        <th>الطعم</th>
+                                        <th>رقم التشغيلة</th>
+                                        <th>الرصيد المتبقي</th>
+                                        <th>الحالة المكتشفة</th>
+                                        <th>المخالفات والملاحظات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stock-results-tbody">
+                                    <!-- Results rows rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Aggregations & Totals Section -->
+                    <div class="results-table-section glass mt-6 p-6">
+                        <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+                            <h3 class="section-title"><i class="fa-solid fa-calculator text-violet-400"></i> كشوف إجماليات المخزون والطعوم</h3>
+                            <div class="flex gap-2">
+                                <button onclick="exportTotalsExcel()" class="btn btn-secondary btn-sm"><i class="fa-solid fa-file-excel text-emerald-400"></i> تصدير الإجماليات (XLSX)</button>
+                                <button onclick="exportTotalsPNG()" class="btn btn-secondary btn-sm"><i class="fa-solid fa-file-image text-rose-400"></i> تصدير كصورة (PNG)</button>
+                            </div>
+                        </div>
+
+                        <!-- Dropdown to select specific office or "all" -->
+                        <div class="flex gap-4 items-center mb-6 flex-wrap">
+                            <label class="text-zinc-300 text-sm font-semibold">تصفية الإجماليات حسب المكتب الصحي:</label>
+                            <select id="totals-office-select" onchange="updateTotalsTable()" class="form-select max-w-[250px]">
+                                <option value="all">كافة المكاتب الصحية (الكل)</option>
+                                <!-- Dynamic office options -->
+                            </select>
+                        </div>
+
+                        <div class="table-responsive max-h-500 overflow-y-auto">
+                            <table class="data-table">
+                                <thead class="sticky-thead">
+                                    <tr>
+                                        <th>الطعم / اللقاح</th>
+                                        <th>إجمالي الرصيد المتبقي (جرعة)</th>
+                                        <th>إجمالي عدد المتطعمين</th>
+                                        <th>إجمالي الفاقد الهادر</th>
+                                        <th>إجمالي التالف المعدم</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stock-totals-tbody">
+                                    <!-- Aggregated totals will be rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Monthly Averages -->
+        <div id="tab-monthly-averages" class="tab-panel hidden">
+            <div class="monthly-averages-layout glass p-6 rounded-3xl">
+                <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+                    <div>
+                        <h2 class="section-title">جدول معدل الاستهلاك الشهري للقاحات</h2>
+                        <p class="section-subtitle">إدارة متوسط الاستهلاك الشهري لمنع تكدس وتراكم كميات زائدة في الوحدات الصحية.</p>
+                    </div>
+                    <div class="actions flex gap-2 flex-wrap">
+                        <button onclick="exportMonthlyAveragesJSON()" class="btn btn-secondary btn-sm">
+                            تصدير الإعدادات <i class="fa-solid fa-download"></i>
+                        </button>
+                        <button onclick="importMonthlyAveragesJSON()" class="btn btn-secondary btn-sm">
+                            استيراد الإعدادات <i class="fa-solid fa-upload"></i>
+                        </button>
+                        <button onclick="showImportConsumptionDialog()" class="btn btn-amber btn-sm">
+                            استيراد شيت الاستهلاك الشهري <i class="fa-solid fa-file-excel"></i>
+                        </button>
+                        <button onclick="showAddAverageModal()" class="btn btn-primary btn-sm">
+                            إدخال حد استهلاك لمكتب <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="search-and-filter mb-6">
+                    <input type="text" id="avg-search-input" onkeyup="filterMonthlyAverages()" placeholder="ابحث باسم مكتب الصحة أو الطعم..." class="search-input">
+                </div>
+
+                <div class="table-responsive max-h-500 overflow-y-auto">
+                    <table class="data-table">
+                        <thead class="sticky-thead">
+                            <tr>
+                                <th>مكتب الصحة</th>
+                                <th>الطعم</th>
+                                <th>متوسط الاستهلاك الشهري (جرعة)</th>
+                                <th>الحد الأقصى المسموح به (جرعة)</th>
+                                <th class="w-100">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="averages-table-tbody">
+                            <tr>
+                                <td colspan="5" class="text-center text-zinc-500">لا توجد معدلات استهلاك مسجلة حالياً. سيتم تسجيل المكاتب تلقائياً عند رفع ملف المخزون.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Name Ties Manager -->
+        <div id="tab-name-ties" class="tab-panel hidden">
+            <div class="name-ties-layout glass p-6 rounded-3xl">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="section-title">روابط مطابقة الأسماء الذكية (Name Ties)</h2>
+                        <p class="section-subtitle">جدول تحويل الأسماء المختلفة بالملفات المستوردة تلقائياً إلى المسميات الموحدة في نظامك.</p>
+                    </div>
+                    <div class="actions flex gap-2">
+                        <button onclick="showAddTieModal()" class="btn btn-primary btn-sm">إضافة رابط اسم <i class="fa-solid fa-link"></i></button>
+                        <button onclick="clearAllTies()" class="btn btn-secondary btn-sm text-rose-400">حذف كافة الروابط <i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>
+
+                <div class="search-and-filter mb-6">
+                    <input type="text" id="ties-search-input" onkeyup="filterNameTies()" placeholder="ابحث في روابط الأسماء (النوع، الأصلي، أو المستهدف)..." class="search-input">
+                </div>
+
+                <div class="table-responsive max-h-500 overflow-y-auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>النوع</th>
+                                <th>الاسم الأصلي (في الإكسيل)</th>
+                                <th>الاسم المستهدف (في النظام)</th>
+                                <th class="w-100">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="name-ties-tbody">
+                            <tr>
+                                <td colspan="4" class="text-center text-zinc-500">لا توجد روابط أسماء مسجلة حالياً. سيتم إنشاء روابط عند استيراد ملف استهلاك وتطبيقه.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Batch Verifier -->
+        <div id="tab-batch-verifier" class="tab-panel hidden">
+            <div class="batch-verifier-layout">
+                <div id="batch-upload-zone" class="upload-zone glass border-dashed" onclick="document.getElementById('batch-file-input').click()">
+                    <i class="fa-solid fa-shield-virus upload-icon text-violet-400"></i>
+                    <h2 id="batch-upload-title" class="upload-heading">قم بسحب وإسقاط ملف التحقق من أرقام التشغيلات هنا</h2>
+                    <p id="batch-upload-desc" class="upload-subheading">التحقق من سلامة وصلاحية أرقام التشغيلات المسجلة بقاعدة البيانات (.xlsx, .xls)</p>
+                    <input type="file" id="batch-file-input" accept=".xlsx, .xls" class="hidden" onchange="handleBatchUpload(event)">
+                </div>
+
+                <!-- Batch Mapping (Hidden initially) -->
+                <div id="batch-mapping-container" class="mapping-card glass mt-6 hidden">
+                    <div class="mapping-header">
+                        <div class="file-badge">
+                            <i class="fa-solid fa-file-excel text-violet-400"></i>
+                            <span id="batch-filename" class="font-semibold text-white">Batch_Data.xlsx</span>
+                        </div>
+                        <button onclick="resetBatchUpload()" class="btn btn-secondary btn-sm">
+                            تغيير الملف <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
+
+                    <div class="preview-section mt-6">
+                        <span class="preview-title">معاينة (أول 5 صفوف)</span>
+                        <div class="table-responsive mt-2">
+                            <table id="batch-preview-table" class="data-table small"></table>
+                        </div>
+                    </div>
+
+                    <div class="mapping-grid-section mt-6">
+                        <h3 class="section-title"><i class="fa-solid fa-link text-violet-400"></i> ربط أعمدة التحقق من التشغيلات</h3>
+                        <div id="batch-mapping-fields" class="mapping-fields-grid mt-4">
+                            <!-- Dynamic batch mapping drop lists -->
+                        </div>
+                    </div>
+
+                    <div class="actions-footer mt-8">
+                        <button onclick="runBatchValidation()" class="btn btn-primary w-full py-4 text-lg">
+                            <i class="fa-solid fa-check-double"></i> بدء التحقق من أرقام التشغيلات
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Batch Results (Hidden initially) -->
+                <div id="batch-results-container" class="results-card mt-6 hidden">
+                    <div class="results-header glass">
+                        <div class="results-summary-info">
+                            <h3 class="results-title text-white">نتائج التحقق من أرقام التشغيلات</h3>
+                            <p class="results-subtitle" id="batch-results-summary-text">جاري المعالجة...</p>
+                        </div>
+                        
+                        <div class="export-actions flex-wrap gap-2">
+                            <button onclick="exportBatchExcel('full')" class="btn btn-success">تصدير التقرير الكامل</button>
+                            <button onclick="exportBatchExcel('unregistered')" class="btn btn-rose">تصدير التشغيلات غير المدرجة</button>
+                            <button onclick="exportBatchExcel('mismatch')" class="btn btn-amber">تصدير التشغيلات غير المتطابقة</button>
+                            <button onclick="addAllUnregisteredToDB()" class="btn btn-violet">إضافة التشغيلات غير المدرجة للدليل</button>
+                            <button onclick="resetBatchUpload()" class="btn btn-secondary">فحص جديد</button>
+                        </div>
+                    </div>
+
+                    <div class="results-table-section glass mt-6 p-6">
+                        <div class="table-responsive max-h-500 overflow-y-auto">
+                            <table class="data-table">
+                                <thead class="sticky-thead">
+                                    <tr>
+                                        <th>نتيجة المطابقة</th>
+                                        <th>الصف</th>
+                                        <th>رقم التشغيلة بالملف</th>
+                                        <th>نوع اللقاح بالملف</th>
+                                        <th>تاريخ الانتهاء بالملف</th>
+                                        <th>التفاصيل والملاحظات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="batch-results-tbody">
+                                    <!-- Results rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Batch Database -->
+        <div id="tab-batch-db" class="tab-panel hidden">
+            <div class="batch-db-layout glass p-6 rounded-3xl">
+                <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+                    <div>
+                        <h2 class="section-title">دليل أرقام التشغيلات الصالحة المعتمدة</h2>
+                        <p class="section-subtitle">أضف أو عدّل أرقام التشغيلات المعتمدة وتواريخ صلاحيتها لتأمين عمليات الفحص والمطابقة.</p>
+                    </div>
+                    <div class="actions flex gap-2 flex-wrap">
+                        <button onclick="exportBatchDBJSON()" class="btn btn-secondary btn-sm">تصدير الدليل <i class="fa-solid fa-download"></i></button>
+                        <button onclick="importBatchDBJSON()" class="btn btn-secondary btn-sm">استيراد الدليل <i class="fa-solid fa-upload"></i></button>
+                        <button id="btn-undo-batch" onclick="triggerUndoAction()" class="btn btn-secondary btn-sm text-rose-400 hidden">تراجع عن آخر استيراد <i class="fa-solid fa-undo"></i></button>
+                        <button onclick="showAddBatchModal()" class="btn btn-primary btn-sm">إضافة تشغيلة معتمدة <i class="fa-solid fa-plus"></i></button>
+                        <button onclick="clearAllBatchDB()" class="btn btn-danger btn-sm">حذف كافة البيانات <i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+
+                <div class="search-and-filter mb-6">
+                    <input type="text" id="batch-db-search" onkeyup="filterBatchDBTable()" placeholder="ابحث برقم التشغيلة أو نوع اللقاح المعتمد..." class="search-input">
+                </div>
+
+                <div id="batch-db-storage-info" class="mb-4 text-xs font-mono text-zinc-400">سجلات التشغيلات: 0 سجل</div>
+
+                <div class="table-responsive max-h-500 overflow-y-auto">
+                    <table class="data-table">
+                        <thead class="sticky-thead">
+                            <tr>
+                                <th>رقم التشغيلة المعتمد</th>
+                                <th>نوع اللقاح المعتمد</th>
+                                <th>الشركة المصنعة</th>
+                                <th>تاريخ انتهاء الصلاحية المعتمد</th>
+                                <th>ملاحظات الدعم الفني</th>
+                                <th class="w-100">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch-db-tbody">
+                            <tr>
+                                <td colspan="6" class="text-center text-zinc-500">لا توجد تشغيلات مسجلة بالدليل حالياً. يمكنك الإضافة يدوياً أو الاستيراد من ملف.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: History -->
+        <div id="tab-history" class="tab-panel hidden">
+            <div class="history-layout max-w-4xl mx-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="section-title">سجل العمليات والتقارير التاريخية</h2>
+                        <p class="section-subtitle">عرض التقارير المحفوظة محلياً لعمليات فحص المخزون والتشغيلات السابقة.</p>
+                    </div>
+                    <button onclick="clearHistoryLog()" class="btn btn-secondary btn-sm text-rose-400">حذف السجل <i class="fa-solid fa-trash-can"></i></button>
+                </div>
+
+                <div id="history-log-list" class="space-y-4">
+                    <!-- History cards -->
+                    <div class="text-center text-zinc-500 py-12 glass rounded-3xl">لا توجد تقارير مخزنة حالياً بسجلاتك المحلية.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Settings & Rules Control -->
+        <div id="tab-settings" class="tab-panel hidden">
+            <div class="settings-layout max-w-2xl mx-auto space-y-6">
+                
+                <!-- General System Settings -->
+                <div class="glass p-8 rounded-3xl">
+                    <h2 class="section-title mb-6"><i class="fa-solid fa-gears text-violet-400"></i> إعدادات فحص المخزون والنظام</h2>
+                    
+                    <div class="settings-group">
+                        <h3 class="settings-group-title">قواعد ومعايير تاريخ انتهاء الصلاحية</h3>
+                        <div class="setting-item mt-4">
+                            <label class="setting-label">مرجع تقييم صلاحية تاريخ انتهاء الصلاحية</label>
+                            <div class="setting-control mt-2">
+                                <label class="radio-label">
+                                    <input type="radio" name="ref-date-type" value="current" checked onchange="toggleRefDateInput()">
+                                    تاريخ الكمبيوتر الحالي (تلقائي اليوم)
+                                </label>
+                                <label class="radio-label mt-2">
+                                    <input type="radio" name="ref-date-type" value="custom" onchange="toggleRefDateInput()">
+                                    تحديد تاريخ مرجعي مخصص للفحص
+                                </label>
+                                <input type="date" id="custom-ref-date" class="form-input mt-2 hidden [color-scheme:dark]">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group mt-6">
+                        <h3 class="settings-group-title">مستويات تخزين اللقاحات الزائد</h3>
+                        <div class="setting-item mt-4">
+                            <label class="setting-label" for="excessive-factor">حد مؤشر تخزين اللقاحات الزائد (مقارنة بمتوسط الاستهلاك الشهري)</label>
+                            <select id="excessive-factor" class="form-select mt-2">
+                                <option value="1.0">تجاوز متوسط الاستهلاك الشهري (> 1.0x)</option>
+                                <option value="1.2">تجاوز متوسط الاستهلاك بمقدار 20% (> 1.2x)</option>
+                                <option value="1.5" selected>تجاوز متوسط الاستهلاك بمقدار 50% (> 1.5x) [موصى به]</option>
+                                <option value="2.0">ضعف متوسط الاستهلاك الشهري (> 2.0x)</option>
+                                <option value="3.0">ثلاثة أضعاف متوسط الاستهلاك الشهري (> 3.0x)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rules Control Settings -->
+                <div class="glass p-8 rounded-3xl">
+                    <h2 class="section-title mb-4"><i class="fa-solid fa-shield-halved text-emerald-400"></i> إدارة قواعد الفحص ومطابقة الشروط</h2>
+                    <p class="section-subtitle mb-6">قم بتفعيل أو تعطيل قواعد الفحص المطبقة على المخزون بشكل منفصل.</p>
+                    
+                    <div class="space-y-4" id="rules-toggles-container">
+                        <!-- Rules toggle items will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Exceptions Settings -->
+                <div class="glass p-8 rounded-3xl">
+                    <h2 class="section-title mb-2"><i class="fa-solid fa-user-shield text-amber-400"></i> استثناءات الوحدات الصحية (Bypass Exceptions)</h2>
+                    <p class="section-subtitle mb-6">بإمكانك تعيين استثناءات لمنع تطبيق قاعدة معينة على طعم لقاح محدد في مكتب صحي بعينه.</p>
+                    
+                    <div class="flex gap-2 mb-4 flex-wrap">
+                        <select id="exception-office" class="form-select flex-1 min-w-[150px]">
+                            <!-- Offices dropdown -->
+                        </select>
+                        <select id="exception-vaccine" class="form-select flex-1 min-w-[150px]">
+                            <!-- Vaccines dropdown -->
+                        </select>
+                        <select id="exception-rule" class="form-select flex-1 min-w-[150px]">
+                            <option value="expiry">تاريخ انتهاء الصلاحية</option>
+                            <option value="vial_capacity_match">سعة عبوات اللقاحات</option>
+                            <option value="wastage_bounds">حدود الهادر والمعدم</option>
+                            <option value="zero_usage_mismatch">الهادر مع الصرف الصفري</option>
+                            <option value="excessive_stock">التخزين الزائد</option>
+                            <option value="duplicate_entries">تكرار إدخال البيانات</option>
+                            <option value="doses_capacity_match">مطابقة عدد الجرعات بسعة العبوة</option>
+                        </select>
+                        <button onclick="addExceptionRule()" class="btn btn-primary">إضافة استثناء</button>
+                    </div>
+
+                    <div class="table-responsive max-h-200">
+                        <table class="data-table small">
+                            <thead>
+                                <tr>
+                                    <th>مكتب الصحة</th>
+                                    <th>الطعم / اللقاح</th>
+                                    <th>القاعدة المستثناة</th>
+                                    <th class="w-60">حذف</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exceptions-tbody">
+                                <!-- Exceptions rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Unified Vaccine Rules Manager -->
+                <div class="glass p-8 rounded-3xl">
+                    <h2 class="section-title mb-2"><i class="fa-solid fa-shield-halved" style="color:var(--cyan)"></i> إدارة قواعد التحقق الموحدة للقاحات</h2>
+                    <p class="section-subtitle mb-6">جدول موحد يحكم ثلاث قواعد دفعةً واحدة: مطابقة سعة عبوات الرصيد، مطابقة عدد الجرعات، وحدود الهادر والمعدم — حمّل ملف إكسيل لاستخراج اللقاحات تلقائياً أو أضف يدوياً.</p>
+
+                    <!-- File Upload Zone -->
+                    <div id="vr-upload-zone" style="border:2px dashed rgba(34,211,238,0.35);border-radius:16px;padding:28px;text-align:center;cursor:pointer;margin-bottom:16px;transition:border-color 0.2s" onclick="document.getElementById('vr-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--cyan)'" ondragleave="this.style.borderColor='rgba(34,211,238,0.35)'" ondrop="event.preventDefault();this.style.borderColor='rgba(34,211,238,0.35)';handleVaccineRulesFile(event)">
+                        <i class="fa-solid fa-file-excel" style="font-size:2rem;color:var(--cyan);margin-bottom:8px"></i>
+                        <div id="vr-upload-label" style="color:var(--text-dim);font-size:0.92rem">اسحب ملف إكسيل هنا أو اضغط لاختيار الملف</div>
+                        <input type="file" id="vr-file-input" accept=".xlsx,.xls" class="hidden" onchange="handleVaccineRulesFile(event)">
+                    </div>
+
+                    <!-- Column selector (shown after file loaded) -->
+                    <div id="vr-col-panel" class="hidden flex gap-2 mb-6 flex-wrap items-center">
+                        <span class="form-label">عمود أسماء اللقاحات:</span>
+                        <select id="vr-col-select" class="form-select flex-1 min-w-[200px]"></select>
+                        <button onclick="extractAndMergeVaccineRules()" class="btn btn-primary"><i class="fa-solid fa-wand-magic-sparkles"></i> استخراج اللقاحات وإضافتها</button>
+                    </div>
+
+                    <!-- Rules Table -->
+                    <div class="table-responsive max-h-300 mb-6">
+                        <table class="data-table small">
+                            <thead>
+                            <tr>
+                                <th>الطعم / اللقاح</th>
+                                <th style="text-align:center">جرعات / عبوة</th>
+                                <th style="text-align:center" title="فحص عدد الجرعات مضاعف لسعة العبوة">فحص الجرعات</th>
+                                <th style="text-align:center" title="فحص الرصيد المتبقي مضاعف لسعة العبوة">فحص المتبقي</th>
+                                <th style="text-align:center">يُسمح بالهادر</th>
+                                <th style="text-align:center">يُسمح بالإعدام</th>
+                                <th style="text-align:center;width:50px">حذف</th>
+                            </tr>
+                        </thead>
+                            <tbody id="vaccine-rules-tbody">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Manual Add Form -->
+                    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px">
+                        <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:10px"><i class="fa-solid fa-plus"></i> إضافة طعم يدوياً</p>
+                        <div class="flex gap-2 flex-wrap items-center">
+                            <input type="text" id="vr-name" class="form-input flex-1 min-w-[160px]" placeholder="اسم الطعم (مثال: MMR)">
+                            <input type="number" id="vr-doses" class="form-input" style="width:110px" placeholder="جرعات/عبوة" min="1" value="1">
+                            <label style="display:flex;align-items:center;gap:6px;color:var(--text-dim);font-size:0.85rem;cursor:pointer">
+                                <label class="toggle-switch"><input type="checkbox" id="vr-check-doses" checked><span class="slider-toggle"></span></label>
+                                <span>فحص الجرعات</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;color:var(--text-dim);font-size:0.85rem;cursor:pointer">
+                                <label class="toggle-switch"><input type="checkbox" id="vr-check-remaining"><span class="slider-toggle"></span></label>
+                                <span>فحص المتبقي</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;color:var(--text-dim);font-size:0.85rem;cursor:pointer">
+                                <label class="toggle-switch"><input type="checkbox" id="vr-wastage"><span class="slider-toggle"></span></label>
+                                <span>هادر</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;color:var(--text-dim);font-size:0.85rem;cursor:pointer">
+                                <label class="toggle-switch"><input type="checkbox" id="vr-destroyed"><span class="slider-toggle"></span></label>
+                                <span>إعدام</span>
+                            </label>
+                            <button onclick="addVaccineRule()" class="btn btn-primary">إضافة / تحديث</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vaccine Packages Manager (Mandated vaccines per dose) -->
+                <div class="glass p-8 rounded-3xl">
+                    <h2 class="section-title mb-2"><i class="fa-solid fa-clipboard-list text-rose-400"></i> إدارة باقات وجرعات التطعيمات الإلزامية للأطفال</h2>
+                    <p class="section-subtitle mb-6">قم بتعديل قائمة الطعوم الإلزامية المطلوبة لكل جرعة (مثل الأولى أو المنشطة) لتخصيص فحص التطعيمات المتأخرة.</p>
+                    
+                    <div class="flex gap-2 mb-4 flex-wrap">
+                        <select id="pkg-dose-level" class="form-select flex-1 min-w-[150px]">
+                            <option value="جرعة الميلاد">جرعة الميلاد</option>
+                            <option value="صفرية">صفرية</option>
+                            <option value="بى سى جى">بى سى جى</option>
+                            <option value="الأولى">الأولى</option>
+                            <option value="الثانية">الثانية</option>
+                            <option value="الثالثة">الثالثة</option>
+                            <option value="الرابعة">الرابعة</option>
+                            <option value="الخامسة">الخامسة</option>
+                            <option value="المنشطة">المنشطة</option>
+                        </select>
+                        <input type="text" id="pkg-vaccine-name" class="form-input flex-2 min-w-[200px]" placeholder="اللقاحات المطلوبة (مفصولة بفاصلة ،)">
+                        <button onclick="saveVaccinePackage()" class="btn btn-primary">حفظ باقة الجرعة</button>
+                    </div>
+
+                    <div class="table-responsive max-h-200">
+                        <table class="data-table small">
+                            <thead>
+                                <tr>
+                                    <th>مستوى الجرعة</th>
+                                    <th>اللقاحات والطعوم الإلزامية المطلوبة بالباقة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="packages-tbody">
+                                <!-- Dynamic vaccine packages rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Backup and settings -->
+                <div class="glass p-8 rounded-3xl">
+                    <h3 class="settings-group-title">النسخ الاحتياطي للنظام</h3>
+                    <p class="setting-hint mb-4">قم بتصدير قاعدة البيانات بالكامل (التشغيلات المعتمدة ومعدلات الاستهلاك وسجلات الفحص) لاستيرادها في تطبيق Python أو لحفظها احتياطياً.</p>
+                    <div class="flex gap-3">
+                        <button onclick="exportBackupPackage()" class="btn btn-secondary flex-1">تصدير حزمة النسخ الاحتياطي (.json)</button>
+                        <button onclick="importBackupPackage()" class="btn btn-secondary flex-1">استيراد حزمة النسخ الاحتياطي (.json)</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Tab: User Guide -->
+        <div id="tab-user-guide" class="tab-panel hidden">
+            <div class="user-guide-container max-w-3xl mx-auto glass p-8 rounded-3xl">
+                <h2 class="section-title mb-6"><i class="fa-solid fa-book text-violet-400"></i> دليل مستخدم نظام VaxGuard Pro</h2>
+                
+                <div class="space-y-6 text-zinc-300 leading-relaxed">
+                    <section>
+                        <h3 class="text-white font-semibold text-lg mb-2">مقدمة عن النظام</h3>
+                        <p>نظام VaxGuard Pro هو أداة متطورة لمراجعة مخزون لقاحات الوحدات الصحية ومطابقة أرقام التشغيلات الطبية للتأكد من خلوها من الأخطاء وسلامتها الكاملة.</p>
+                    </section>
+
+                    <section>
+                        <h3 class="text-white font-semibold text-lg mb-2">قواعد مراجعة المخزون الذكية</h3>
+                        <ul class="list-disc pr-6 space-y-2">
+                            <li><strong>تاريخ انتهاء الصلاحية:</strong> فحص انتهاء اللقاحات مقارنة بتاريخ اليوم أو تاريخ مخصص.</li>
+                            <li><strong>عبوات MMR:</strong> يجب أن يكون الرصيد المتبقي من مضاعفات العدد 10 دائماً (سعة العبوة 10 جرعات).</li>
+                            <li><strong>عبوات BCG (بى سى جى):</strong> يجب أن يكون الرصيد المتبقي من مضاعفات العدد 20 دائماً (سعة العبوة 20 جرعات).</li>
+                            <li><strong>الفاقد الهادر والتالف المعدم:</strong> مسموح بهما فقط في لقاحات MMR و BCG. ومسموح بالهادر فقط في شلل الأطفال سابين. يُمنع الهادر/المعدم لباقي اللقاحات.</li>
+                            <li><strong>مخالفة الصرف الصفري:</strong> يُمنع تسجيل كمية هادر أو معدم إذا كان عدد المتطعمين يساوي صفر.</li>
+                            <li><strong>التخزين الزائد:</strong> تنبيه إذا تجاوز المخزون نسبة محددة (مثل 1.5 ضعف) من متوسط استهلاك الوحدة الشهري.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h3 class="text-white font-semibold text-lg mb-2">خطوات العمل الأساسية</h3>
+                        <ol class="list-decimal pr-6 space-y-2">
+                            <li>ارفع ملف الجرد بصيغة Excel في صفحة "فحص مخزون الوحدات".</li>
+                            <li>طابق أعمدة الجرد مع حقول النظام (مثل ربط الرصيد بالرصيد المتبقي).</li>
+                            <li>اضغط "بدء مراجعة وفحص المخزون" لعرض المخالفات تفصيلياً بالألوان.</li>
+                            <li>اضغط "تصدير التقرير المنسق (RTL)" لتنزيل ملف Excel منسق مع تلوين الصفوف المخالفة بالأصفر.</li>
+                        </ol>
+                    </section>
+
+                    <section>
+                        <h3 class="text-white font-semibold text-lg mb-2">مزامنة البيانات والنسخ الاحتياطي</h3>
+                        <p>يمكنك تصدير قاعدة البيانات بالكامل كملف JSON من صفحة "الإعدادات" واستيرادها في تطبيق Python GUI للعمل المشترك دون انقطاع.</p>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: About Me -->
+        <div id="tab-about" class="tab-panel hidden">
+            <div class="about-me-container max-w-2xl mx-auto glass p-8 rounded-3xl text-center">
+                <img src="./about-me.jpg" alt="Wael Sayed" class="profile-avatar mx-auto mb-6">
+                <h2 class="section-title text-2xl mb-2">Designed by Wael Sayed</h2>
+                <h3 class="text-violet-400 font-medium mb-4">Software Developer & Language Enthusiast</h3>
+                
+                <p class="text-zinc-300 max-w-lg mx-auto mb-8 leading-relaxed">
+                    Hello! I'm Wael, a passionate developer and language enthusiast. I built DeutschMeister Pro and VaxGuard Pro to provide seamless learning, assessment, and stock validation tools. This system helps public health offices check vaccine stocks, track batch details, and manage databases efficiently with dynamic customization.
+                </p>
+                
+                <div class="flex justify-center gap-4 flex-wrap">
+                    <a href="https://linkedin.com" target="_blank" class="btn btn-secondary text-sm"><i class="fa-brands fa-linkedin text-violet-400"></i> LinkedIn</a>
+                    <a href="https://github.com" target="_blank" class="btn btn-secondary text-sm"><i class="fa-brands fa-github text-violet-400"></i> GitHub</a>
+                    <a href="https://x.com" target="_blank" class="btn btn-secondary text-sm"><i class="fa-brands fa-x-twitter text-violet-400"></i> Twitter</a>
+                    <a href="mailto:contact@example.com" class="btn btn-secondary text-sm"><i class="fa-solid fa-envelope text-violet-400"></i> Email</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Utilities -->
+        <div id="tab-utilities" class="tab-panel hidden">
+            <h2 class="section-title mb-6"><i class="fa-solid fa-laptop-medical text-violet-400"></i> الخدمات والأدوات الإضافية</h2>
+
+            <!-- Utilities Menu Grid -->
+            <div id="utilities-menu-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="card p-6 border border-slate-800 hover:border-violet-500/60 transition-all duration-300 cursor-pointer group" onclick="openUtility('missing-vaccinations')">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div class="w-12 h-12 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0 group-hover:bg-violet-500/20 transition-colors">
+                            <i class="fa-solid fa-child-reaching text-2xl text-violet-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-white mb-1">فاحص التطعيمات المتأخرة للأطفال</h3>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                يقوم بالتحقق من جداول جرد تطعيمات الأطفال المسجلة واكتشاف أي طعوم ناقصة أو غير مدرجة لكل جرعة (مثل جرعة الميلاد، الصفرية، الأولى، الثانية، الثالثة، الرابعة، الخامسة، والمنشطة).
+                            </p>
+                        </div>
+                    </div>
+                    <button class="btn-primary py-2 px-4 text-xs font-semibold w-full" id="btn-launch-utility">
+                        <i class="fa-solid fa-play ml-1"></i> تشغيل الأداة
+                    </button>
+                </div>
+            </div>
+
+            <!-- Utility Workspace -->
+            <div id="utility-workspace" class="hidden">
+
+                <!-- Missing Vaccinations Checker Subpanel -->
+                <div id="util-missing-vaccinations" class="utility-subpanel hidden">
+
+                    <!-- Panel Header -->
+                    <div class="card p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-child-reaching text-lg text-rose-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white text-sm" id="missing-checker-title">فاحص التطعيمات المتأخرة والناقصة للأطفال</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">يدعم ملفات متعددة — مطابق تماماً لمنطق الأداة الأصلية</p>
+                            </div>
+                        </div>
+                        <button onclick="closeUtility()" class="btn-secondary py-2 px-3 text-xs">
+                            <i class="fa-solid fa-xmark ml-1"></i> إغلاق
+                        </button>
+                    </div>
+
+                    <!-- Upload Zone (shown until processing starts) -->
+                    <div id="missing-upload-zone" class="mb-4">
+
+                        <!-- Drop Area -->
+                        <div class="upload-zone text-center cursor-pointer" id="missing-drop-area"
+                            onclick="document.getElementById('missing-file-input').click()"
+                            ondragover="event.preventDefault(); this.classList.add('dragover')"
+                            ondragleave="this.classList.remove('dragover')"
+                            ondrop="handleMissingDrop(event)">
+                            <input type="file" id="missing-file-input" class="hidden" accept=".xlsx,.xls" multiple onchange="handleMissingUpload(event)">
+                            <div class="py-10 px-6">
+                                <div class="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto mb-3">
+                                    <i class="fa-solid fa-files text-3xl text-rose-400"></i>
+                                </div>
+                                <p class="text-white font-semibold mb-1 text-sm">اضغط لتحديد ملف أو أكثر (.xlsx)</p>
+                                <p class="text-slate-500 text-xs mb-3">يمكنك تحديد عدة ملفات دفعة واحدة — تُدمج النتائج وتُزال التكرارات تلقائياً</p>
+                                <div class="flex flex-wrap justify-center gap-2">
+                                    <span class="missing-tag"><i class="fa-solid fa-user text-violet-400"></i> الاسم</span>
+                                    <span class="missing-tag"><i class="fa-solid fa-syringe text-violet-400"></i> الجرعة</span>
+                                    <span class="missing-tag"><i class="fa-solid fa-vial text-violet-400"></i> نوع الطعم</span>
+                                    <span class="missing-tag"><i class="fa-solid fa-location-dot text-violet-400"></i> مكان التطعيم</span>
+                                    <span class="missing-tag"><i class="fa-solid fa-calendar text-violet-400"></i> تاريخ الميلاد</span>
+                                    <span class="missing-tag"><i class="fa-solid fa-id-card text-violet-400"></i> رقم القيد</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selected files list -->
+                        <div id="missing-files-list" class="hidden mt-3 card p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-semibold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-folder-open text-amber-400"></i>
+                                    <span id="missing-files-count">0 ملفات محددة</span>
+                                </h4>
+                                <div class="flex gap-2">
+                                    <button onclick="document.getElementById('missing-file-input').click()" class="btn-secondary py-1.5 px-3 text-xs">
+                                        <i class="fa-solid fa-plus ml-1"></i> إضافة ملفات
+                                    </button>
+                                    <button onclick="startMissingAnalysis()" class="btn-primary py-1.5 px-4 text-xs font-bold" id="btn-start-analysis">
+                                        <i class="fa-solid fa-play ml-1"></i> بدء التحليل
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="missing-file-items" class="space-y-2 max-h-36 overflow-y-auto"></div>
+                        </div>
+                    </div>
+
+                    <!-- Processing Spinner -->
+                    <div id="missing-processing" class="hidden card p-10 text-center mb-4">
+                        <div class="w-16 h-16 mx-auto mb-4 relative">
+                            <div class="absolute inset-0 border-4 border-violet-500/20 rounded-full"></div>
+                            <div class="absolute inset-0 border-4 border-transparent border-t-violet-500 rounded-full animate-spin"></div>
+                        </div>
+                        <p class="text-white font-semibold mb-1">جاري تحليل الملفات...</p>
+                        <p id="missing-processing-status" class="text-slate-500 text-xs">يُرجى الانتظار</p>
+                    </div>
+
+                    <!-- Results Panel -->
+                    <div id="missing-results-container" class="hidden">
+
+                        <!-- Source files info bar -->
+                        <div id="missing-source-bar" class="card p-3 mb-4 flex items-center gap-3 border border-violet-500/20">
+                            <i class="fa-solid fa-circle-info text-violet-400 text-sm shrink-0"></i>
+                            <p id="missing-source-text" class="text-xs text-slate-300"></p>
+                            <button onclick="resetMissingChecker()" class="btn btn-secondary py-1 px-3 text-xs mr-auto shrink-0">
+                                <i class="fa-solid fa-rotate ml-1"></i> فحص ملف جديد
+                            </button>
+                        </div>
+
+                        <!-- Stats Grid -->
+                        <div id="missing-stats-row" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4"></div>
+
+                        <!-- Toolbar -->
+                        <div class="card p-3 mb-3 flex flex-wrap items-center gap-2">
+                            <div class="flex items-center gap-2 flex-1" style="min-width:160px">
+                                <i class="fa-solid fa-magnifying-glass text-slate-500 text-xs shrink-0"></i>
+                                <input id="missing-search-input" type="text" class="search-input flex-1 text-xs" placeholder="بحث بالاسم، القيد، الموقع..." oninput="filterMissingResults()">
+                            </div>
+                            <select id="missing-dose-filter" class="form-select text-xs" onchange="filterMissingResults()">
+                                <option value="">كل الجرعات</option>
+                                <option value="صفرية">الصفرية</option>
+                                <option value="بى سى جى">بى سى جى</option>
+                                <option value="الأولى">الأولى</option>
+                                <option value="الثانية">الثانية</option>
+                                <option value="الثالثة">الثالثة</option>
+                                <option value="الرابعة">الرابعة</option>
+                                <option value="الخامسة">الخامسة</option>
+                                <option value="المنشطة">المنشطة</option>
+                                <option value="جرعة الميلاد">جرعة الميلاد</option>
+                            </select>
+                            <button onclick="exportMissingExcel()" class="btn-export btn-export-excel">
+                                <i class="fa-solid fa-file-excel"></i> تصدير Missing Doses.xlsx
+                            </button>
+                            <button onclick="exportMissingPNG()" class="btn-export btn-export-png">
+                                <i class="fa-solid fa-image"></i> تصدير PNG
+                            </button>
+                        </div>
+
+                        <!-- Row count -->
+                        <div class="flex items-center justify-between mb-2 px-1">
+                            <p id="missing-summary-text" class="text-xs text-slate-400"></p>
+                            <span id="missing-row-count" class="text-xs text-slate-500 font-mono"></span>
+                        </div>
+
+                        <!-- Results Table — 14 columns matching Python exactly -->
+                        <div class="table-responsive rounded-xl border border-slate-800">
+                            <table class="table-vax w-full text-xs" style="min-width:1200px">
+                                <thead>
+                                    <tr class="preview-header text-right">
+                                        <th class="p-3 text-center" style="width:40px">م</th>
+                                        <th class="p-3">Child Name / الاسم</th>
+                                        <th class="p-3">Birth Date</th>
+                                        <th class="p-3 text-center">Dose / الجرعة</th>
+                                        <th class="p-3" style="min-width:160px">Missing Vaccines</th>
+                                        <th class="p-3" style="min-width:140px">Received Vaccines</th>
+                                        <th class="p-3">Vaccination Location</th>
+                                        <th class="p-3">Registration Location</th>
+                                        <th class="p-3 text-center">Reg. Number</th>
+                                        <th class="p-3 text-center">Vac. Date</th>
+                                        <th class="p-3 text-center">Reg. Date</th>
+                                        <th class="p-3 text-center">Nationality</th>
+                                        <th class="p-3 text-center">Gender</th>
+                                        <th class="p-3 text-center">Record Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="missing-results-tbody"></tbody>
+                            </table>
+                        </div>
+
+                    </div><!-- /results -->
+                </div><!-- /util-missing-vaccinations -->
+            </div><!-- /utility-workspace -->
+        </div><!-- /tab-utilities -->
+
+
+    </main>
+</div>
+
+<!-- ================================================
+     MODAL DIALOGS (Custom designed overlays - NO browser default popups)
+     ================================================ -->
+
+<!-- Add / Edit Approved Batch Modal -->
+<div id="modal-batch-edit" class="modal-overlay hidden" onclick="hideModal('modal-batch-edit')">
+    <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 id="modal-batch-title" class="modal-title">إضافة تشغيلة معتمدة جديدة</h3>
+            <button onclick="hideModal('modal-batch-edit')" class="btn-close-modal">&times;</button>
+        </div>
+        <div class="modal-body space-y-4">
+            <div>
+                <label class="form-label">رقم التشغيلة المعتمد <span class="text-rose-400">*</span></label>
+                <input id="form-batch-id" type="text" class="form-input font-mono" placeholder="مثال: 0164W049">
+                <input type="hidden" id="form-batch-old-id">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">نوع اللقاح</label>
+                    <input id="form-batch-type" type="text" class="form-input" placeholder="مثال: MMR">
+                </div>
+                <div>
+                    <label class="form-label">الشركة المصنعة</label>
+                    <input id="form-batch-manuf" type="text" class="form-input" placeholder="مثال: SERUM INST.">
+                </div>
+            </div>
+            <div>
+                <label class="form-label">تاريخ انتهاء الصلاحية المعتمد</label>
+                <input id="form-batch-expiry" type="date" class="form-input [color-scheme:dark]">
+            </div>
+            <div>
+                <label class="form-label">ملاحظات الدعم</label>
+                <textarea id="form-batch-notes" rows="2" class="form-input resize-none" placeholder="اكتب ملاحظات اختيارية هنا..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="hideModal('modal-batch-edit')" class="btn btn-secondary">إلغاء</button>
+            <button onclick="saveBatchFromForm()" class="btn btn-primary">حفظ التشغيلة</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit Monthly Average Modal (Unified Office form for ALL vaccines at once!) -->
+<div id="modal-average-edit" class="modal-overlay hidden" onclick="hideModal('modal-average-edit')">
+    <div class="modal-card max-w-lg" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 id="modal-average-title" class="modal-title">إدارة حدود استهلاك المكتب الصحي</h3>
+            <button onclick="hideModal('modal-average-edit')" class="btn-close-modal">&times;</button>
+        </div>
+        <div class="modal-body space-y-4">
+            <div>
+                <label class="form-label">مكتب الصحة / الوحدة الصحية <span class="text-rose-400">*</span></label>
+                <input id="form-avg-office" type="text" class="form-input" placeholder="مثال: بندر اهناسيا">
+                <input type="hidden" id="form-avg-old-office">
+            </div>
+            
+            <div class="border-t border-zinc-800 pt-4">
+                <h4 class="text-sm font-semibold text-violet-400 mb-2">أدخل متوسط الاستهلاك الشهري (جرعة) للقاحات النشطة:</h4>
+                <div id="form-avg-vaccines-container" class="space-y-3 max-h-300 overflow-y-auto pr-2">
+                    <!-- Dynamic vaccine input rows will be injected here -->
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="hideModal('modal-average-edit')" class="btn btn-secondary">إلغاء</button>
+            <button onclick="saveAverageFromForm()" class="btn btn-primary">حفظ كافة البيانات للمكتب</button>
+        </div>
+    </div>
+</div>
+
+<!-- Import Consumption File Settings & Tie Selection Modal -->
+<div id="modal-import-consumption" class="modal-overlay hidden" onclick="hideModal('modal-import-consumption')">
+    <div class="modal-card max-w-lg" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 class="modal-title">استيراد شيت الاستهلاك الشهري للقاحات</h3>
+            <button onclick="hideModal('modal-import-consumption')" class="btn-close-modal">&times;</button>
+        </div>
+        <div class="modal-body space-y-4">
+            <div id="consumption-select-file-view">
+                <p class="text-sm text-zinc-400 mb-4">يقوم هذا المعالج بقراءة ملف متوسط استهلاك الطعوم، ويتيح لك مطابقة الأسماء المتفاوتة لربطها لمرة واحدة بالنظام.</p>
+                <button onclick="document.getElementById('consumption-file-input').click()" class="btn btn-primary w-full py-3">
+                    <i class="fa-solid fa-file-excel"></i> اختر ملف متوسط الاستهلاك
+                </button>
+                <input type="file" id="consumption-file-input" accept=".xlsx, .xls" class="hidden" onchange="handleConsumptionFileChosen(event)">
+            </div>
+            
+            <div id="consumption-sheet-choice-view" class="hidden">
+                <label class="form-label">اختر جدول المتوسط المطلوب استيراده</label>
+                <select id="consumption-sheet-select" class="form-select mt-2">
+                    <!-- Sheet options -->
+                </select>
+                <button onclick="processConsumptionSheetData()" class="btn btn-primary w-full mt-4">متابعة الاستيراد والتحليل</button>
+            </div>
+
+            <!-- Name Tie Mapping Assistant View -->
+            <div id="consumption-tie-view" class="hidden">
+                <h4 class="text-sm font-semibold text-rose-400 mb-2">مساعد مطابقة وربط المسميات المجهولة بالملف</h4>
+                <p class="text-xs text-zinc-400 mb-4" id="tie-assistant-meta-text">تم العثور على مسميات في الملف لا تطابق السجلات الحالية. اربطها لتسهيل العمليات مستقبلاً:</p>
+                
+                <div id="tie-questions-container" class="space-y-4 max-h-300 overflow-y-auto pr-2">
+                    <!-- Dynamic matching questions -->
+                </div>
+                
+                <button onclick="saveActiveTiesAndFinishImport()" class="btn btn-success w-full mt-4">حفظ الروابط واستكمال الاستيراد</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manual Add Name Tie Modal -->
+<div id="modal-tie-add" class="modal-overlay hidden" onclick="hideModal('modal-tie-add')">
+    <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 class="modal-title">إضافة رابط اسم مخصص</h3>
+            <button onclick="hideModal('modal-tie-add')" class="btn-close-modal">&times;</button>
+        </div>
+        <div class="modal-body space-y-4">
+            <div>
+                <label class="form-label">فئة المسمى</label>
+                <select id="form-tie-category" class="form-select">
+                    <option value="office">مكتب الصحة / الوحدة</option>
+                    <option value="vaccine">الطعم / اللقاح</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">الاسم الأصلي الوارد بالملف <span class="text-rose-400">*</span></label>
+                <input id="form-tie-source" type="text" class="form-input" placeholder="مثال: بندر اهناسيا">
+            </div>
+            <div>
+                <label class="form-label">الاسم المعتمد في نظامك <span class="text-rose-400">*</span></label>
+                <input id="form-tie-target" type="text" class="form-input" placeholder="مثال: بندر اهناسيا">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="hideModal('modal-tie-add')" class="btn btn-secondary">إلغاء</button>
+            <button onclick="saveManualTie()" class="btn btn-primary">إنشاء الرابط</button>
+        </div>
+    </div>
+</div>
+
+<!-- History Detail Chart Report Modal -->
+<div id="modal-history-detail" class="modal-overlay hidden" onclick="hideModal('modal-history-detail')">
+    <div class="modal-card max-w-2xl" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 id="history-detail-title" class="modal-title">تفاصيل تقرير مراجعة المخزون</h3>
+            <button onclick="hideModal('modal-history-detail')" class="btn-close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="history-detail-meta" class="mb-4 text-sm text-zinc-400">
+                <!-- Metadata rendered dynamically -->
+            </div>
+            
+            <div class="chart-container h-250 mb-6">
+                <canvas id="history-pie-chart"></canvas>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 mb-6">
+                <div class="bg-zinc-800/60 p-4 rounded-2xl text-center border-b-4 border-emerald-500">
+                    <div id="hist-detail-clean-count" class="text-3xl font-bold text-emerald-400">0</div>
+                    <span class="text-xs text-zinc-400 block mt-1">سجلات سليمة</span>
+                </div>
+                <div class="bg-zinc-800/60 p-4 rounded-2xl text-center border-b-4 border-rose-500">
+                    <div id="hist-detail-issues-count" class="text-3xl font-bold text-rose-400">0</div>
+                    <span class="text-xs text-zinc-400 block mt-1">سجلات مخالفات</span>
+                </div>
+                <div class="bg-zinc-800/60 p-4 rounded-2xl text-center border-b-4 border-violet-500">
+                    <div id="hist-detail-total-count" class="text-3xl font-bold text-violet-400">0</div>
+                    <span class="text-xs text-zinc-400 block mt-1">إجمالي السجلات</span>
+                </div>
+            </div>
+
+            <div id="history-detail-issues-list" class="max-h-200 overflow-y-auto space-y-2">
+                <!-- List of issues in history -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="exportHistoryReportFile()" class="btn btn-success">تصدير التقرير مجدداً <i class="fa-solid fa-download"></i></button>
+            <button onclick="hideModal('modal-history-detail')" class="btn btn-secondary">إغلاق</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Confirmation Modal (Replaces native window.confirm) -->
+<div id="modal-confirm" class="modal-overlay hidden" onclick="cancelConfirmModal()">
+    <div class="modal-card max-w-sm" onclick="event.stopPropagation()">
+        <div class="modal-header border-none">
+            <h3 id="confirm-title" class="modal-title text-rose-400">تأكيد الإجراء</h3>
+            <button onclick="cancelConfirmModal()" class="btn-close-modal">&times;</button>
+        </div>
+        <div class="modal-body py-4">
+            <p id="confirm-message" class="text-white text-base">هل أنت متأكد من رغبتك في حذف هذا العنصر نهائياً؟ لا يمكن التراجع عن هذا القرار.</p>
+        </div>
+        <div class="modal-footer border-none">
+            <button onclick="cancelConfirmModal()" class="btn btn-secondary">إلغاء</button>
+            <button id="btn-confirm-action" onclick="executeConfirmModal()" class="btn btn-danger">تأكيد الإجراء</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast notification system -->
+<div id="toast" onclick="this.classList.add('hidden')" class="toast-popup hidden">
+    <i id="toast-icon" class="fa-solid fa-circle-check"></i>
+    <span id="toast-text">تمت العملية بنجاح!</span>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

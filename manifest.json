@@ -1,0 +1,23 @@
+{
+  "name": "VaxGuard Suite - Vaccine Stock & Immunization Verifier",
+  "short_name": "VaxGuard Suite",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#8b5cf6",
+  "description": "نظام ذكي لمراجعة مخزون اللقاحات وسلامة التشغيلات للوحدات الصحية والمكاتب",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-500.png",
+      "sizes": "500x500",
+      "type": "image/png"
+    }
+  ]
+}
